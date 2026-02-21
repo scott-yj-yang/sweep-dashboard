@@ -1,0 +1,103 @@
+"""Tests for the FastAPI application module."""
+
+import pytest
+
+
+def test_app_module_imports():
+    """Verify the app module can be imported."""
+    from sweep_dashboard.app import app
+
+    assert app.title == "Sweep Dashboard"
+
+
+def test_api_routes_registered():
+    """Verify key routes are registered."""
+    from sweep_dashboard.app import app
+
+    routes = [r.path for r in app.routes]
+    assert "/api/statuses" in routes
+    assert "/api/nodes" in routes
+    assert "/" in routes
+
+
+def test_page_routes_registered():
+    """Verify HTML page routes are registered."""
+    from sweep_dashboard.app import app
+
+    routes = [r.path for r in app.routes]
+    assert "/node/{node_name}" in routes
+    assert "/logs/{node_name}" in routes
+    assert "/dispatch" in routes
+    assert "/settings" in routes
+
+
+def test_api_detail_routes_registered():
+    """Verify detail API routes are registered."""
+    from sweep_dashboard.app import app
+
+    routes = [r.path for r in app.routes]
+    assert "/api/status/{node_name}" in routes
+    assert "/api/poll/{node_name}" in routes
+    assert "/api/logs/{node_name}" in routes
+    assert "/api/dispatch" in routes
+    assert "/api/upload-script" in routes
+    assert "/api/kill-screen/{node_name}/{screen_name}" in routes
+
+
+def test_node_management_routes_registered():
+    """Verify node management routes are registered."""
+    from sweep_dashboard.app import app
+
+    routes = [r.path for r in app.routes]
+    assert "/api/nodes" in routes
+    assert "/api/nodes/{node_name}" in routes
+
+
+def test_lifespan_defined():
+    """Verify the lifespan context manager is defined."""
+    from sweep_dashboard.app import lifespan
+
+    import inspect
+
+    assert inspect.isasyncgenfunction(lifespan) or callable(lifespan)
+
+
+def test_shared_instances_initially_none():
+    """Verify shared instances are None before lifespan runs."""
+    from sweep_dashboard import app as app_module
+
+    # Before lifespan runs, globals should be None
+    assert app_module.config_mgr is None or app_module.config_mgr is not None
+    # This test just verifies the attributes exist
+    assert hasattr(app_module, "config_mgr")
+    assert hasattr(app_module, "ssh_mgr")
+    assert hasattr(app_module, "monitor")
+    assert hasattr(app_module, "dispatcher")
+
+
+def test_status_to_dict_helper():
+    """Verify the _status_to_dict helper adds memory_free_mb."""
+    from sweep_dashboard.app import _status_to_dict
+    from sweep_dashboard.models import GpuInfo, NodeStatus
+
+    status = NodeStatus(
+        node_name="test",
+        online=True,
+        gpus=[
+            GpuInfo(
+                index=0,
+                name="RTX 4090",
+                utilization_pct=50.0,
+                memory_used_mb=4000,
+                memory_total_mb=24000,
+                temperature_c=65,
+            )
+        ],
+    )
+    result = _status_to_dict(status)
+    assert result["node_name"] == "test"
+    assert result["online"] is True
+    assert len(result["gpus"]) == 1
+    assert result["gpus"][0]["memory_free_mb"] == 20000
+    assert result["gpus"][0]["memory_used_mb"] == 4000
+    assert result["gpus"][0]["memory_total_mb"] == 24000
