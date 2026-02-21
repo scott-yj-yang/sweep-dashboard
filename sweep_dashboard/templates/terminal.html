@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Terminal — {{ node.name }}{% endblock %}
+{% block content %}
+<div class="terminal-header" style="display:flex;align-items:center;gap:1rem;margin-bottom:0.5rem">
+    <h1 style="margin-bottom:0">Terminal: {{ node.name }}</h1>
+    <span class="detail-meta">{{ node.user }}@{{ node.hostname }}:{{ node.port }}</span>
+    <button class="btn btn-sm" onclick="reconnect()">Reconnect</button>
+    <span id="conn-status" class="badge badge-unknown">Connecting...</span>
+</div>
+<div id="terminal-container" style="height: calc(100vh - 140px);"></div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+{% endblock %}
+{% block extra_js %}
+<script>
+    const nodeName = "{{ node.name }}";
+    let ws = null;
+    let term = null;
+
+    function initTerminal() {
+        const container = document.getElementById('terminal-container');
+        container.innerHTML = '';
+
+        term = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+            theme: {
+                background: '#0f1117',
+                foreground: '#e1e4ed',
+                cursor: '#6366f1',
+                selectionBackground: '#6366f144',
+            },
+        });
+
+        const fitAddon = new FitAddon.FitAddon();
+        const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+        term.loadAddon(fitAddon);
+        term.loadAddon(webLinksAddon);
+        term.open(container);
+        fitAddon.fit();
+
+        window.addEventListener('resize', () => fitAddon.fit());
+
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}/ws/terminal/${nodeName}`);
+
+        const statusEl = document.getElementById('conn-status');
+
+        ws.onopen = () => {
+            statusEl.textContent = 'Connected';
+            statusEl.className = 'badge badge-online';
+        };
+
+        ws.onmessage = (event) => {
+            term.write(event.data);
+        };
+
+        ws.onclose = () => {
+            statusEl.textContent = 'Disconnected';
+            statusEl.className = 'badge badge-offline';
+            term.write('\r\n\x1b[31m--- Connection closed ---\x1b[0m\r\n');
+        };
+
+        ws.onerror = () => {
+            statusEl.textContent = 'Error';
+            statusEl.className = 'badge badge-offline';
+        };
+
+        term.onData((data) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(data);
+            }
+        });
+    }
+
+    function reconnect() {
+        if (ws) ws.close();
+        initTerminal();
+    }
+
+    initTerminal();
+</script>
+{% endblock %}

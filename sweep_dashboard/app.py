@@ -8,7 +8,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -17,6 +17,7 @@ from .config import NodeConfigManager
 from .job_dispatcher import JobDispatcher
 from .node_monitor import NodeMonitor
 from .ssh_manager import SSHManager
+from .terminal import websocket_ssh_bridge
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,24 @@ async def settings_page(request: Request):
         "settings.html",
         {"request": request, "nodes": nodes},
     )
+
+
+@app.get("/terminal/{node_name}", response_class=HTMLResponse)
+async def terminal_page(request: Request, node_name: str):
+    """Interactive SSH terminal page."""
+    try:
+        node = config_mgr.get_node(node_name)
+    except KeyError:
+        raise HTTPException(404, f"Node '{node_name}' not found")
+    return templates.TemplateResponse("terminal.html", {
+        "request": request, "node": node,
+    })
+
+
+@app.websocket("/ws/terminal/{node_name}")
+async def ws_terminal(websocket: WebSocket, node_name: str):
+    """WebSocket endpoint for interactive SSH terminal."""
+    await websocket_ssh_bridge(websocket, node_name, config_mgr)
 
 
 # ---------------------------------------------------------------------------
