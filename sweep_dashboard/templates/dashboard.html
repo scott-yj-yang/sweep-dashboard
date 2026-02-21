@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Sweep Dashboard{% endblock %}
+{% block content %}
+<h1>Cluster Overview</h1>
+<div class="stats-bar">
+    <span id="total-nodes">Nodes: {{ nodes|length }}</span>
+    <span id="online-count">Online: --</span>
+    <span id="total-gpus">GPUs: --</span>
+</div>
+<div id="node-grid" class="node-grid">
+    {% for node in nodes %}
+    <div class="node-card" id="card-{{ node.name }}" data-node="{{ node.name }}">
+        <div class="node-header">
+            <h3>{{ node.name }}</h3>
+            <span class="badge badge-unknown" id="badge-{{ node.name }}">...</span>
+        </div>
+        <div class="node-body">
+            <div class="gpu-section" id="gpus-{{ node.name }}">
+                <p class="muted">Loading GPU info...</p>
+            </div>
+            <div class="job-section" id="jobs-{{ node.name }}">
+                <p class="muted">Loading jobs...</p>
+            </div>
+            <div class="sys-section" id="sys-{{ node.name }}">
+                <p class="muted">Loading system info...</p>
+            </div>
+        </div>
+        <div class="node-footer">
+            <a href="/node/{{ node.name }}" class="btn btn-sm">Details</a>
+            <a href="/logs/{{ node.name }}" class="btn btn-sm">Logs</a>
+            <a href="/terminal/{{ node.name }}" class="btn btn-sm">Terminal</a>
+            <button class="btn btn-sm btn-outline" onclick="forcePoll('{{ node.name }}')">Refresh</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

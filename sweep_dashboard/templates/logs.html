@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Logs — {{ node.name }}{% endblock %}
+{% block content %}
+<h1>Logs: {{ node.name }}</h1>
+
+{% if log_path %}
+<div class="log-header">
+    <span class="cmd">{{ log_path }}</span>
+    <button class="btn btn-sm" onclick="refreshLog()">Refresh</button>
+    <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+</div>
+<pre id="log-content" class="log-viewer">Loading...</pre>
+{% else %}
+<h2>Select a log file</h2>
+<div id="log-list">Loading...</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+    const nodeName = "{{ node.name }}";
+    const logPath = "{{ log_path }}";
+
+    async function refreshLog() {
+        if (!logPath) return;
+        try {
+            const resp = await fetch(`/api/logs/${nodeName}?path=${encodeURIComponent(logPath)}&lines=500`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const el = document.getElementById('log-content');
+            el.textContent = data.content;
+            if (document.getElementById('auto-scroll').checked) {
+                el.scrollTop = el.scrollHeight;
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadLogList() {
+        try {
+            const resp = await fetch(`/api/logs/${nodeName}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const el = document.getElementById('log-list');
+            if (!data.content || !data.content.trim()) {
+                el.innerHTML = '<p class="muted">No log files found</p>';
+                return;
+            }
+            const files = data.content.trim().split('\n');
+            el.innerHTML = files.map(f =>
+                `<a href="/logs/${nodeName}?path=${encodeURIComponent(f)}" class="log-link">${f}</a>`
+            ).join('<br>');
+        } catch(e) { console.error(e); }
+    }
+
+    if (logPath) {
+        refreshLog();
+        setInterval(refreshLog, 10000);
+    } else {
+        loadLogList();
+    }
+</script>
+{% endblock %}

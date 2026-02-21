@@ -67,10 +67,7 @@ app = FastAPI(title="Sweep Dashboard", lifespan=lifespan)
 STATIC_DIR = Path(__file__).parent / "static"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
-# Mount static files only if the directory exists and is non-empty,
-# otherwise defer until Task 9 populates it.
-if STATIC_DIR.is_dir() and any(STATIC_DIR.iterdir()):
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 

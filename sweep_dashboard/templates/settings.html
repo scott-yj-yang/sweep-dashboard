@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Settings — Sweep Dashboard{% endblock %}
+{% block content %}
+<h1>Node Management</h1>
+
+<div class="form-grid">
+    <div class="card">
+        <h3>Add New Node</h3>
+        <form id="add-node-form">
+            <label>Name</label>
+            <input type="text" name="name" required placeholder="e.g., Salk-Scott-Linux">
+
+            <label>Hostname / IP</label>
+            <input type="text" name="hostname" required placeholder="100.76.192.27">
+
+            <label>Port</label>
+            <input type="number" name="port" value="22">
+
+            <label>Username</label>
+            <input type="text" name="user" required placeholder="talmolab">
+
+            <label>Password</label>
+            <input type="password" name="password" required>
+
+            <label>Working Directory</label>
+            <input type="text" name="work_dir" required placeholder="/home/talmolab/Desktop/SalkResearch/vnl-playground">
+
+            <label>Venv Activate Path (optional)</label>
+            <input type="text" name="venv_activate" placeholder="/home/talmolab/Desktop/SalkResearch/mimic-mjx/bin/activate">
+
+            <label>GPU Count</label>
+            <input type="number" name="gpu_count" value="1" min="0">
+
+            <label>Network</label>
+            <select name="network">
+                <option value="tailscale">Tailscale</option>
+                <option value="infranet">Infranet (runai)</option>
+                <option value="local">Local</option>
+            </select>
+
+            <label>Tags (comma-separated)</label>
+            <input type="text" name="tags" placeholder="salk, 2gpu">
+
+            <button type="submit" class="btn btn-primary">Add Node</button>
+            <div id="add-result"></div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Existing Nodes ({{ nodes|length }})</h3>
+        <table class="data-table">
+            <tr><th>Name</th><th>Host</th><th>User</th><th>Work Dir</th><th>GPUs</th><th>Actions</th></tr>
+            {% for node in nodes %}
+            <tr id="row-{{ node.name }}">
+                <td>{{ node.name }}</td>
+                <td>{{ node.hostname }}:{{ node.port }}</td>
+                <td>{{ node.user }}</td>
+                <td class="cmd">{{ node.work_dir }}</td>
+                <td>{{ node.gpu_count }}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="removeNode('{{ node.name }}')">Remove</button></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.getElementById('add-node-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const resp = await fetch('/api/nodes', { method: 'POST', body: form });
+        const data = await resp.json();
+        const el = document.getElementById('add-result');
+        if (data.success) {
+            el.className = 'result-success';
+            el.textContent = data.message;
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            el.className = 'result-error';
+            el.textContent = data.detail || 'Failed to add node';
+        }
+    });
+
+    async function removeNode(name) {
+        if (!confirm(`Remove node "${name}"?`)) return;
+        const resp = await fetch(`/api/nodes/${name}`, { method: 'DELETE' });
+        if (resp.ok) {
+            document.getElementById(`row-${name}`)?.remove();
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dispatch Job{% endblock %}
+{% block content %}
+<h1>Dispatch Sweep Job</h1>
+
+<div class="form-grid">
+    <form id="dispatch-form" class="card">
+        <h3>Launch Script</h3>
+
+        <label>Target Node</label>
+        <select name="node_name" required>
+            {% for node in nodes %}
+            <option value="{{ node.name }}">{{ node.name }} ({{ node.hostname }})</option>
+            {% endfor %}
+        </select>
+
+        <label>Script</label>
+        <select name="script_name" id="script-select" required>
+            <option value="">-- Select a script --</option>
+            {% for s in scripts %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Launch method</label>
+        <select name="use_screen">
+            <option value="true" selected>screen (recommended)</option>
+            <option value="false">nohup</option>
+        </select>
+
+        <label>Screen session name (optional)</label>
+        <input type="text" name="screen_name" placeholder="auto-generated if empty">
+
+        <label>Environment variables (KEY=VALUE, one per line)</label>
+        <textarea name="env_vars" rows="3" placeholder="CUDA_VISIBLE_DEVICES=0&#10;JOB_TAG=my_experiment"></textarea>
+
+        <button type="submit" class="btn btn-primary">Dispatch</button>
+        <div id="dispatch-result"></div>
+    </form>
+
+    <div class="card">
+        <h3>Upload New Script</h3>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".sh" required>
+            <button type="submit" class="btn">Upload</button>
+        </form>
+        <div id="upload-result"></div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.getElementById('dispatch-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const resp = await fetch('/api/dispatch', { method: 'POST', body: form });
+        const data = await resp.json();
+        const el = document.getElementById('dispatch-result');
+        el.className = data.success ? 'result-success' : 'result-error';
+        el.textContent = data.success
+            ? `Dispatched! Log: ${data.log_file}`
+            : `Error: ${data.error || JSON.stringify(data)}`;
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const resp = await fetch('/api/upload-script', { method: 'POST', body: form });
+        const data = await resp.json();
+        const el = document.getElementById('upload-result');
+        if (data.success) {
+            el.className = 'result-success';
+            el.textContent = `Uploaded: ${data.filename}`;
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            el.className = 'result-error';
+            el.textContent = `Error: ${data.detail || 'Upload failed'}`;
+        }
+    });
+</script>
+{% endblock %}

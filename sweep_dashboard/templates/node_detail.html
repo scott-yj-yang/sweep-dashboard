@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ node.name }} — Sweep Dashboard{% endblock %}
+{% block content %}
+<h1>{{ node.name }}</h1>
+<div class="detail-meta">
+    <span>Host: {{ node.hostname }}:{{ node.port }}</span>
+    <span>User: {{ node.user }}</span>
+    <span>Work dir: {{ node.work_dir }}</span>
+    <span>Network: {{ node.network }}</span>
+    <span>GPUs: {{ node.gpu_count }}</span>
+</div>
+
+<div class="detail-grid">
+    <section class="detail-section">
+        <h2>GPU Status</h2>
+        <div id="gpu-detail">Loading...</div>
+    </section>
+
+    <section class="detail-section">
+        <h2>Running Jobs</h2>
+        <div id="job-detail">Loading...</div>
+    </section>
+
+    <section class="detail-section">
+        <h2>System</h2>
+        <div id="sys-detail">Loading...</div>
+    </section>
+
+    <section class="detail-section full-width">
+        <h2>Recent Logs</h2>
+        <div id="log-list">Loading log files...</div>
+    </section>
+</div>
+
+<div style="margin-top:1rem">
+    <a href="/terminal/{{ node.name }}" class="btn btn-primary">Open Terminal</a>
+    <button class="btn" onclick="forcePollDetail()">Refresh</button>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    const nodeName = "{{ node.name }}";
+
+    async function loadNodeDetail() {
+        try {
+            const resp = await fetch(`/api/status/${nodeName}`);
+            if (!resp.ok) return;
+            const s = await resp.json();
+            renderGpuDetail(s.gpus);
+            renderJobDetail(s.running_jobs);
+            renderSysDetail(s);
+        } catch(e) { console.error(e); }
+    }
+
+    async function loadLogList() {
+        try {
+            const resp = await fetch(`/api/logs/${nodeName}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const el = document.getElementById('log-list');
+            if (!data.content || !data.content.trim()) {
+                el.innerHTML = '<p class="muted">No log files found</p>';
+                return;
+            }
+            const files = data.content.trim().split('\n');
+            el.innerHTML = files.map(f =>
+                `<a href="/logs/${nodeName}?path=${encodeURIComponent(f)}" class="log-link">${f}</a>`
+            ).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    function renderGpuDetail(gpus) {
+        const el = document.getElementById('gpu-detail');
+        if (!gpus || gpus.length === 0) {
+            el.innerHTML = '<p class="muted">No GPU data</p>';
+            return;
+        }
+        el.innerHTML = gpus.map(g => `
+            <div class="gpu-card">
+                <strong>GPU ${g.index}: ${g.name}</strong>
+                <div class="bar-container">
+                    <div class="bar" style="width:${g.utilization_pct}%;background:${barColor(g.utilization_pct)}">${g.utilization_pct}%</div>
+                </div>
+                <span>VRAM: ${g.memory_used_mb}/${g.memory_total_mb} MB (${Math.round(g.memory_used_mb/g.memory_total_mb*100)}%)</span>
+                <span style="margin-left:1rem">Temp: ${g.temperature_c}°C</span>
+            </div>
+        `).join('');
+    }
+
+    function renderJobDetail(jobs) {
+        const el = document.getElementById('job-detail');
+        if (!jobs || jobs.length === 0) {
+            el.innerHTML = '<p class="muted">No running training jobs</p>';
+            return;
+        }
+        el.innerHTML = '<table class="data-table"><tr><th>PID</th><th>Command</th><th>Screen</th></tr>' +
+            jobs.map(j => `<tr><td>${j.pid}</td><td class="cmd">${j.command}</td><td>${j.screen_name || '-'}</td></tr>`).join('') + '</table>';
+    }
+
+    function renderSysDetail(s) {
+        const el = document.getElementById('sys-detail');
+        el.innerHTML = `
+            <p>CPU: ${s.cpu_percent != null ? s.cpu_percent + '%' : 'N/A'}</p>
+            <p>RAM: ${s.memory_used_mb || '?'}/${s.memory_total_mb || '?'} MB</p>
+            <p>Uptime: ${s.uptime || 'N/A'}</p>
+            <p class="muted">Last poll: ${s.last_poll_time || 'never'}</p>
+        `;
+    }
+
+    async function forcePollDetail() {
+        await fetch(`/api/poll/${nodeName}`, { method: 'POST' });
+        await loadNodeDetail();
+    }
+
+    loadNodeDetail();
+    loadLogList();
+    setInterval(loadNodeDetail, 15000);
+</script>
+{% endblock %}
