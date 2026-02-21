@@ -1,0 +1,6 @@
+master_key.txt
+nodes.yaml
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
