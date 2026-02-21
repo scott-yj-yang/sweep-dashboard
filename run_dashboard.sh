@@ -6,7 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Activate virtual environment
-source /home/talmolab/Desktop/SalkResearch/mimic-mjx/bin/activate
+# Uses the project-local .venv; create with: uv venv && uv pip install -e ".[dev]"
+source "${SCRIPT_DIR}/.venv/bin/activate"
 
 # Ensure scripts directory exists
 mkdir -p scripts
