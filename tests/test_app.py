@@ -75,6 +75,32 @@ def test_shared_instances_initially_none():
     assert hasattr(app_module, "dispatcher")
 
 
+def test_parse_jobs_deduplicates_wrapper_and_python():
+    """When both wrapper and python process are present, only the python job is kept."""
+    from sweep_dashboard.node_monitor import NodeMonitor
+
+    # Simulate ps aux output with both wrapper and python process
+    ps_output = (
+        "user  1001  0.0  0.0  12345  678 ?  S  10:00  0:00  bash ./run_with_autoresume.sh --config rodent\n"
+        "user  1002  5.0  2.0  99999 9999 ?  Sl 10:01  1:23  python -m vnl_playground.train_highlvl --config rodent\n"
+    )
+    jobs = NodeMonitor._parse_jobs(ps_output, "")
+    assert len(jobs) == 1
+    assert "train_highlvl" in jobs[0].command
+
+
+def test_parse_jobs_keeps_wrapper_when_no_python():
+    """When only the wrapper process exists (e.g. during retry wait), keep it."""
+    from sweep_dashboard.node_monitor import NodeMonitor
+
+    ps_output = (
+        "user  1001  0.0  0.0  12345  678 ?  S  10:00  0:00  bash ./run_with_autoresume.sh --config rodent\n"
+    )
+    jobs = NodeMonitor._parse_jobs(ps_output, "")
+    assert len(jobs) == 1
+    assert "run_with_autoresume" in jobs[0].command
+
+
 def test_status_to_dict_helper():
     """Verify the _status_to_dict helper adds memory_free_mb."""
     from sweep_dashboard.app import _status_to_dict

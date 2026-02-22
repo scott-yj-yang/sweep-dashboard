@@ -224,6 +224,15 @@ async def api_force_poll(node_name: str):
     return _status_to_dict(status)
 
 
+@app.post("/api/poll-all")
+async def api_force_poll_all():
+    """Force an immediate poll of all nodes."""
+    nodes = config_mgr.list_nodes()
+    tasks = [monitor.poll_single(n.name) for n in nodes]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return {"success": True, "polled": len(nodes)}
+
+
 @app.get("/api/logs/{node_name}")
 async def api_get_logs(node_name: str, path: str = "", lines: int = 200):
     """Retrieve log content or list of log files for a node."""

@@ -11,7 +11,7 @@ function renderGpuBars(gpus) {
     if (!gpus || gpus.length === 0) return '<p class="muted">No GPU data</p>';
     return gpus.map(g => `
         <div style="margin-bottom:6px">
-            <small>GPU ${g.index}: ${g.utilization_pct}% | ${g.memory_used_mb}/${g.memory_total_mb}MB | ${g.temperature_c}°C</small>
+            <small>GPU ${g.index} (${g.name}): ${g.utilization_pct}% | ${g.memory_used_mb}/${g.memory_total_mb}MB | ${g.temperature_c}°C</small>
             <div class="bar-container">
                 <div class="bar" style="width:${g.utilization_pct}%;background:${barColor(g.utilization_pct)}">${g.utilization_pct}%</div>
             </div>
@@ -67,6 +67,19 @@ async function pollStatuses() {
         if (gpuEl) gpuEl.textContent = `GPUs: ${totalGpus}`;
     } catch (e) {
         console.error('Poll error:', e);
+    }
+}
+
+async function refreshAll() {
+    const btn = document.getElementById('refresh-all-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Refreshing...'; }
+    try {
+        await fetch('/api/poll-all', { method: 'POST' });
+        await pollStatuses();
+    } catch (e) {
+        console.error('Refresh all error:', e);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Refresh All'; }
     }
 }
 

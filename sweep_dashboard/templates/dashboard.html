@@ -6,6 +6,9 @@
     <span id="total-nodes">Nodes: {{ nodes|length }}</span>
     <span id="online-count">Online: --</span>
     <span id="total-gpus">GPUs: --</span>
+    <span style="margin-left:auto">
+        <button class="btn btn-sm btn-outline" onclick="refreshAll()" id="refresh-all-btn">Refresh All</button>
+    </span>
 </div>
 <div id="node-grid" class="node-grid">
     {% for node in nodes %}

@@ -132,4 +132,15 @@ class NodeMonitor:
                 jobs.append(JobInfo(pid=pid, command=command))
             except (ValueError, IndexError):
                 continue
+
+        # Deduplicate: if any job is the actual train_highlvl process, filter
+        # out the run_with_autoresume wrapper (which is a parent shell script).
+        has_train = any("train_highlvl" in j.command for j in jobs)
+        if has_train:
+            jobs = [
+                j for j in jobs
+                if "train_highlvl" in j.command
+                or "run_with_autoresume" not in j.command
+            ]
+
         return jobs
