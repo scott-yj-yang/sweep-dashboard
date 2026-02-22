@@ -96,3 +96,81 @@ if (document.getElementById('node-grid')) {
     pollStatuses();
     setInterval(pollStatuses, POLL_INTERVAL);
 }
+
+// --- Drag and Drop for Node Cards ---
+function initDragAndDrop() {
+    const grid = document.getElementById('node-grid');
+    if (!grid) return;
+
+    // Restore saved order
+    const savedOrder = localStorage.getItem('node-card-order');
+    if (savedOrder) {
+        try {
+            const order = JSON.parse(savedOrder);
+            order.forEach(name => {
+                const card = document.getElementById(`card-${name}`);
+                if (card) grid.appendChild(card);
+            });
+        } catch (e) { /* ignore bad data */ }
+    }
+
+    let draggedCard = null;
+
+    grid.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.node-card');
+        if (!card) return;
+        draggedCard = card;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.node);
+    });
+
+    grid.addEventListener('dragend', (e) => {
+        if (draggedCard) {
+            draggedCard.classList.remove('dragging');
+            draggedCard = null;
+        }
+        grid.querySelectorAll('.node-card').forEach(c => c.classList.remove('drag-over'));
+    });
+
+    grid.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = e.target.closest('.node-card');
+        if (!target || target === draggedCard) return;
+
+        // Clear all drag-over highlights
+        grid.querySelectorAll('.node-card').forEach(c => c.classList.remove('drag-over'));
+        target.classList.add('drag-over');
+    });
+
+    grid.addEventListener('dragleave', (e) => {
+        const target = e.target.closest('.node-card');
+        if (target) target.classList.remove('drag-over');
+    });
+
+    grid.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const target = e.target.closest('.node-card');
+        if (!target || !draggedCard || target === draggedCard) return;
+
+        // Determine if we should insert before or after
+        const targetRect = target.getBoundingClientRect();
+        const midY = targetRect.top + targetRect.height / 2;
+        if (e.clientY < midY) {
+            grid.insertBefore(draggedCard, target);
+        } else {
+            grid.insertBefore(draggedCard, target.nextSibling);
+        }
+
+        // Save order
+        const cards = grid.querySelectorAll('.node-card');
+        const order = Array.from(cards).map(c => c.dataset.node);
+        localStorage.setItem('node-card-order', JSON.stringify(order));
+
+        grid.querySelectorAll('.node-card').forEach(c => c.classList.remove('drag-over'));
+    });
+}
+
+// Initialize drag and drop
+initDragAndDrop();

@@ -351,3 +351,16 @@ input:focus, select:focus, textarea:focus {
 .review-box .data-table td:first-child {
     width: 80px;
 }
+
+/* Drag and Drop */
+.node-card[draggable="true"] {
+    cursor: grab;
+}
+.node-card.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+.node-card.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+}

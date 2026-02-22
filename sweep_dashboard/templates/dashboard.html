@@ -12,7 +12,7 @@
 </div>
 <div id="node-grid" class="node-grid">
     {% for node in nodes %}
-    <div class="node-card" id="card-{{ node.name }}" data-node="{{ node.name }}">
+    <div class="node-card" id="card-{{ node.name }}" data-node="{{ node.name }}" draggable="true">
         <div class="node-header">
             <h3>{{ node.name }}</h3>
             <span class="badge badge-unknown" id="badge-{{ node.name }}">...</span>
