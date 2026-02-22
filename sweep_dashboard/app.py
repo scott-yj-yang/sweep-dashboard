@@ -17,7 +17,7 @@ from .config import NodeConfigManager
 from .job_dispatcher import JobDispatcher
 from .node_monitor import NodeMonitor
 from .ssh_manager import SSHManager
-from .terminal import websocket_ssh_bridge
+from .terminal import websocket_ssh_bridge, websocket_setup_terminal
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +155,37 @@ async def terminal_page(request: Request, node_name: str):
 async def ws_terminal(websocket: WebSocket, node_name: str):
     """WebSocket endpoint for interactive SSH terminal."""
     await websocket_ssh_bridge(websocket, node_name, config_mgr)
+
+
+@app.websocket("/ws/setup-terminal")
+async def ws_setup_terminal(websocket: WebSocket):
+    """WebSocket terminal for setup wizard (uses raw connection params)."""
+    params = websocket.query_params
+    await websocket_setup_terminal(
+        websocket,
+        hostname=params.get("hostname", ""),
+        port=int(params.get("port", "22")),
+        user=params.get("user", ""),
+        password=params.get("password", ""),
+    )
+
+
+@app.post("/api/exec-command")
+async def api_exec_command(
+    hostname: str = Form(...),
+    port: int = Form(22),
+    user: str = Form(...),
+    password: str = Form(...),
+    command: str = Form("pwd"),
+):
+    """Execute a single command on a remote node (for setup wizard pwd capture)."""
+    from .models import NodeConfig
+    temp_node = NodeConfig(
+        name="_exec", hostname=hostname, port=port, user=user,
+        password_encrypted="", work_dir="/",
+    )
+    code, stdout, stderr = ssh_mgr.execute(temp_node, command, password, timeout=10)
+    return {"exit_code": code, "stdout": stdout, "stderr": stderr}
 
 
 # ---------------------------------------------------------------------------

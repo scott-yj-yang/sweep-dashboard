@@ -92,6 +92,68 @@ async def websocket_ssh_bridge(
             pass
 
 
+async def websocket_setup_terminal(
+    ws: WebSocket,
+    hostname: str,
+    port: int,
+    user: str,
+    password: str,
+):
+    """WebSocket SSH bridge using raw connection params (for setup wizard)."""
+    await ws.accept()
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        client.connect(hostname, port=port, username=user, password=password, timeout=10)
+    except Exception as e:
+        await ws.send_text(f"\r\nSSH connection failed: {e}\r\n")
+        await ws.close()
+        return
+
+    channel = client.invoke_shell(term="xterm-256color", width=120, height=30)
+    channel.settimeout(0.1)
+
+    await ws.send_text(f"\r\nConnected to {user}@{hostname}\r\n")
+
+    async def read_ssh():
+        loop = asyncio.get_event_loop()
+        while True:
+            try:
+                data = await loop.run_in_executor(None, _read_channel, channel)
+                if data:
+                    await ws.send_text(data)
+                else:
+                    await asyncio.sleep(0.05)
+            except Exception:
+                break
+
+    async def write_ssh():
+        try:
+            while True:
+                data = await ws.receive_text()
+                if data:
+                    channel.send(data)
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            pass
+
+    read_task = asyncio.create_task(read_ssh())
+    write_task = asyncio.create_task(write_ssh())
+
+    try:
+        await asyncio.gather(read_task, write_task, return_exceptions=True)
+    finally:
+        channel.close()
+        client.close()
+        try:
+            await ws.close()
+        except Exception:
+            pass
+
+
 def _read_channel(channel) -> str | None:
     """Blocking read from paramiko channel (run in executor)."""
     try:
