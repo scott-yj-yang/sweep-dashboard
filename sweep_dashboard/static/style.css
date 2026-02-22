@@ -364,3 +364,35 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent);
 }
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    gap: 2px;
+}
+.view-btn {
+    padding: 3px 8px;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.view-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+/* List View */
+.node-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.node-list .data-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+}

@@ -6,7 +6,11 @@
     <span id="total-nodes">Nodes: {{ nodes|length }}</span>
     <span id="online-count">Online: --</span>
     <span id="total-gpus">GPUs: --</span>
-    <span style="margin-left:auto">
+    <span style="margin-left:auto;display:flex;gap:0.5rem;align-items:center">
+        <span class="view-toggle">
+            <button class="btn btn-sm view-btn active" id="grid-view-btn" onclick="setView('grid')" title="Grid view">&#9638;</button>
+            <button class="btn btn-sm view-btn" id="list-view-btn" onclick="setView('list')" title="List view">&#9776;</button>
+        </span>
         <button class="btn btn-sm btn-outline" onclick="refreshAll()" id="refresh-all-btn">Refresh All</button>
     </span>
 </div>
@@ -36,5 +40,25 @@
         </div>
     </div>
     {% endfor %}
+</div>
+<div id="node-list" class="node-list" style="display:none">
+    <table class="data-table" id="node-list-table">
+        <thead>
+            <tr>
+                <th>Node</th>
+                <th>Status</th>
+                <th>GPUs</th>
+                <th>GPU Util</th>
+                <th>VRAM</th>
+                <th>Jobs</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>WandB</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="node-list-body">
+        </tbody>
+    </table>
 </div>
 {% endblock %}
