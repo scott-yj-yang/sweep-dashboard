@@ -97,6 +97,9 @@ class NodeMonitor:
             screen_raw = await loop.run_in_executor(
                 self._executor, self._ssh.get_screen_sessions, node, password
             )
+            wandb_url = await loop.run_in_executor(
+                self._executor, self._ssh.get_wandb_url, node, password
+            )
 
             running_jobs = self._parse_jobs(jobs_raw, screen_raw)
 
@@ -110,6 +113,7 @@ class NodeMonitor:
                 memory_total_mb=sys_info.get("memory_total_mb"),
                 uptime=sys_info.get("uptime"),
                 last_poll_time=datetime.now(timezone.utc).isoformat(),
+                wandb_url=wandb_url,
             )
         except Exception as e:
             return NodeStatus(

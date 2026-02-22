@@ -19,10 +19,18 @@ function renderGpuBars(gpus) {
     `).join('');
 }
 
-function renderJobs(jobs) {
-    if (!jobs || jobs.length === 0) return '<p class="muted">No running jobs</p>';
-    return `<p>${jobs.length} job(s) running</p>` +
-        jobs.map(j => `<div class="cmd" style="font-size:0.7rem;margin-top:2px">${j.command.substring(0, 80)}...</div>`).join('');
+function renderJobs(jobs, wandb_url) {
+    let html = '';
+    if (!jobs || jobs.length === 0) {
+        html = '<p class="muted">No running jobs</p>';
+    } else {
+        html = `<p>${jobs.length} job(s) running</p>` +
+            jobs.map(j => `<div class="cmd" style="font-size:0.7rem;margin-top:2px">${j.command.substring(0, 80)}...</div>`).join('');
+    }
+    if (wandb_url) {
+        html += `<a href="${wandb_url}" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--accent);display:inline-block;margin-top:4px">&#x1f517; WandB Run</a>`;
+    }
+    return html;
 }
 
 function renderSys(s) {
@@ -55,7 +63,7 @@ async function pollStatuses() {
             if (gpuEl) gpuEl.innerHTML = renderGpuBars(s.gpus);
 
             const jobEl = document.getElementById(`jobs-${name}`);
-            if (jobEl) jobEl.innerHTML = renderJobs(s.running_jobs);
+            if (jobEl) jobEl.innerHTML = renderJobs(s.running_jobs, s.wandb_url);
 
             const sysEl = document.getElementById(`sys-${name}`);
             if (sysEl) sysEl.innerHTML = renderSys(s);

@@ -89,6 +89,28 @@ class SSHManager:
         code, stdout, _ = self.execute(node, "screen -ls 2>&1 || true", password)
         return stdout if code == 0 else ""
 
+    def get_wandb_url(self, node: NodeConfig, password: str) -> str | None:
+        """Extract the latest WandB run URL from the node's work directory."""
+        # Try to get URL from wandb debug.log in latest-run
+        cmd = (
+            f"grep -oP 'https://wandb\\.ai/\\S+' "
+            f"{node.work_dir}/wandb/latest-run/logs/debug.log 2>/dev/null | tail -1"
+        )
+        code, stdout, _ = self.execute(node, cmd, password, timeout=10)
+        if code == 0 and stdout.strip():
+            return stdout.strip()
+
+        # Fallback: grep recent training logs
+        cmd = (
+            f"grep -rh 'https://wandb.ai/' {node.work_dir}/training_attempt_*.log "
+            f"2>/dev/null | tail -1 | grep -oP 'https://wandb\\.ai/\\S+'"
+        )
+        code, stdout, _ = self.execute(node, cmd, password, timeout=10)
+        if code == 0 and stdout.strip():
+            return stdout.strip()
+
+        return None
+
     def tail_log(self, node: NodeConfig, password: str, log_path: str, lines: int = 100) -> str:
         cmd = f"tail -n {lines} {log_path} 2>&1"
         code, stdout, _ = self.execute(node, cmd, password, timeout=15)

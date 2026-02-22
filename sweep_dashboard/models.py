@@ -53,6 +53,7 @@ class NodeStatus(BaseModel):
     memory_total_mb: int | None = None
     uptime: str | None = None
     last_poll_time: str | None = None
+    wandb_url: str | None = None
 
 
 class DispatchRequest(BaseModel):

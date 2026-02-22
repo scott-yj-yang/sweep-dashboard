@@ -47,7 +47,7 @@
             if (!resp.ok) return;
             const s = await resp.json();
             renderGpuDetail(s.gpus);
-            renderJobDetail(s.running_jobs);
+            renderJobDetail(s.running_jobs, s.wandb_url);
             renderSysDetail(s);
         } catch(e) { console.error(e); }
     }
@@ -87,14 +87,19 @@
         `).join('');
     }
 
-    function renderJobDetail(jobs) {
+    function renderJobDetail(jobs, wandb_url) {
         const el = document.getElementById('job-detail');
+        let html = '';
         if (!jobs || jobs.length === 0) {
-            el.innerHTML = '<p class="muted">No running training jobs</p>';
-            return;
+            html = '<p class="muted">No running training jobs</p>';
+        } else {
+            html = '<table class="data-table"><tr><th>PID</th><th>Command</th><th>Screen</th></tr>' +
+                jobs.map(j => `<tr><td>${j.pid}</td><td class="cmd">${j.command}</td><td>${j.screen_name || '-'}</td></tr>`).join('') + '</table>';
         }
-        el.innerHTML = '<table class="data-table"><tr><th>PID</th><th>Command</th><th>Screen</th></tr>' +
-            jobs.map(j => `<tr><td>${j.pid}</td><td class="cmd">${j.command}</td><td>${j.screen_name || '-'}</td></tr>`).join('') + '</table>';
+        if (wandb_url) {
+            html += `<div style="margin-top:8px"><a href="${wandb_url}" target="_blank" rel="noopener" class="btn btn-sm" style="color:var(--accent)">&#x1f517; Open WandB Run</a></div>`;
+        }
+        el.innerHTML = html;
     }
 
     function renderSysDetail(s) {
