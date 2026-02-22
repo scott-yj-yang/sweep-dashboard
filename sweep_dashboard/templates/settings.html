@@ -4,50 +4,128 @@
 <h1>Node Management</h1>
 
 <div class="form-grid">
+    <!-- Wizard Card -->
     <div class="card">
-        <h3>Add New Node</h3>
-        <form id="add-node-form">
-            <label>Name</label>
-            <input type="text" name="name" required placeholder="e.g., Salk-Scott-Linux">
+        <div class="wizard-steps">
+            <span class="wizard-step active" id="step-indicator-1">1. Connect</span>
+            <span class="wizard-step" id="step-indicator-2">2. Configure</span>
+            <span class="wizard-step" id="step-indicator-3">3. Save</span>
+        </div>
+
+        <!-- Step 1: Connection -->
+        <div id="wizard-step-1" class="wizard-panel">
+            <h3>Step 1: Connection Details</h3>
+            <label>Node Name</label>
+            <input type="text" id="w-name" required placeholder="e.g., Salk-Scott-Linux">
 
             <label>Hostname / IP</label>
-            <input type="text" name="hostname" required placeholder="100.76.192.27">
+            <input type="text" id="w-hostname" required placeholder="100.76.192.27">
 
             <label>Port</label>
-            <input type="number" name="port" value="22">
+            <input type="number" id="w-port" value="22">
 
             <label>Username</label>
-            <input type="text" name="user" required placeholder="talmolab">
+            <input type="text" id="w-user" required placeholder="talmolab">
 
             <label>Password</label>
-            <input type="password" name="password" required>
+            <input type="password" id="w-password" required>
 
-            <label>Working Directory</label>
-            <input type="text" name="work_dir" required placeholder="/home/talmolab/Desktop/SalkResearch/vnl-playground">
+            <div style="margin-top:1rem; display:flex; gap:0.75rem; align-items:center;">
+                <button class="btn btn-primary" onclick="testConnection()">Test Connection</button>
+                <span id="conn-result"></span>
+            </div>
 
-            <label>Venv Activate Path (optional)</label>
-            <input type="text" name="venv_activate" placeholder="/home/talmolab/Desktop/SalkResearch/mimic-mjx/bin/activate">
+            <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+                <button class="btn btn-primary" id="btn-step1-next" onclick="goToStep(2)" disabled>Next</button>
+            </div>
+        </div>
 
-            <label>GPU Count</label>
-            <input type="number" name="gpu_count" value="1" min="0">
+        <!-- Step 2: Browse & Configure -->
+        <div id="wizard-step-2" class="wizard-panel" style="display:none">
+            <h3>Step 2: Working Directory & Environment</h3>
+
+            <div class="browse-header">
+                <label style="margin-top:0">Working Directory</label>
+                <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.25rem">
+                    <input type="text" id="w-workdir" readonly placeholder="Click a directory below...">
+                    <button class="btn btn-sm" onclick="openMiniTerminal()" title="Open terminal to navigate manually">Terminal</button>
+                </div>
+            </div>
+
+            <!-- File Browser -->
+            <div id="file-browser" class="file-browser">
+                <div class="file-browser-path">
+                    <span id="browser-current-path">/</span>
+                    <button class="btn btn-sm btn-outline" onclick="browseParent()">Up</button>
+                </div>
+                <div id="browser-entries" class="browser-entries">
+                    <p class="muted">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Mini Terminal (hidden by default) -->
+            <div id="mini-terminal-wrapper" style="display:none; margin-top:0.75rem;">
+                <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
+                    <span class="muted">Navigate to your working directory, then:</span>
+                    <button class="btn btn-sm btn-primary" onclick="captureTerminalPwd()">Use Current Directory</button>
+                    <button class="btn btn-sm" onclick="closeMiniTerminal()">Close Terminal</button>
+                </div>
+                <div id="mini-terminal-container" style="height:300px; border:1px solid var(--border); border-radius:8px; overflow:hidden;"></div>
+            </div>
+
+            <!-- Auto-detected info -->
+            <div style="margin-top:1rem">
+                <label>GPU Count (auto-detected)</label>
+                <input type="number" id="w-gpu-count" value="0" min="0">
+
+                <label>Virtual Environment</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <select id="w-venv-select" style="flex:1">
+                        <option value="">None (no venv)</option>
+                    </select>
+                    <button class="btn btn-sm" onclick="detectVenvs()">Detect</button>
+                </div>
+                <input type="text" id="w-venv" placeholder="Or type path manually..." style="margin-top:0.25rem">
+            </div>
+
+            <div style="margin-top:1rem; display:flex; justify-content:space-between;">
+                <button class="btn" onclick="goToStep(1)">Back</button>
+                <button class="btn btn-primary" id="btn-step2-next" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Confirm & Save -->
+        <div id="wizard-step-3" class="wizard-panel" style="display:none">
+            <h3>Step 3: Review & Save</h3>
+
+            <div id="review-summary" class="review-box"></div>
 
             <label>Network</label>
-            <select name="network">
+            <select id="w-network">
                 <option value="tailscale">Tailscale</option>
                 <option value="infranet">Infranet (runai)</option>
                 <option value="local">Local</option>
             </select>
 
-            <label>Tags (comma-separated)</label>
-            <input type="text" name="tags" placeholder="salk, 2gpu">
+            <label>Tags (comma-separated, optional)</label>
+            <input type="text" id="w-tags" placeholder="salk, 2gpu">
 
-            <button type="submit" class="btn btn-primary">Add Node</button>
-            <div id="add-result"></div>
-        </form>
+            <div style="margin-top:1rem; display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn" onclick="goToStep(2)">Back</button>
+                <div style="display:flex; gap:0.75rem; align-items:center;">
+                    <span id="save-result"></span>
+                    <button class="btn btn-primary" onclick="saveNode()">Save Node</button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- Existing Nodes Table -->
     <div class="card">
         <h3>Existing Nodes ({{ nodes|length }})</h3>
+        {% if nodes|length == 0 %}
+        <p class="muted">No nodes configured yet. Use the wizard to add one.</p>
+        {% else %}
         <table class="data-table">
             <tr><th>Name</th><th>Host</th><th>User</th><th>Work Dir</th><th>GPUs</th><th>Actions</th></tr>
             {% for node in nodes %}
@@ -57,37 +135,318 @@
                 <td>{{ node.user }}</td>
                 <td class="cmd">{{ node.work_dir }}</td>
                 <td>{{ node.gpu_count }}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="removeNode('{{ node.name }}')">Remove</button></td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="removeNode('{{ node.name }}')">Remove</button>
+                </td>
             </tr>
             {% endfor %}
         </table>
+        {% endif %}
     </div>
 </div>
+
+<!-- xterm.js for mini terminal -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-    document.getElementById('add-node-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = new FormData(e.target);
-        const resp = await fetch('/api/nodes', { method: 'POST', body: form });
+// ===== Wizard State =====
+let currentStep = 1;
+let connInfo = {};
+let miniTermWs = null;
+let miniTerm = null;
+
+// ===== Step Navigation =====
+function goToStep(step) {
+    if (step === 2 && currentStep === 1) {
+        const homeDir = connInfo.home_dir || '/';
+        browseTo(homeDir);
+    }
+    if (step === 3) {
+        buildReviewSummary();
+    }
+    for (let i = 1; i <= 3; i++) {
+        document.getElementById(`wizard-step-${i}`).style.display = i === step ? 'block' : 'none';
+        const ind = document.getElementById(`step-indicator-${i}`);
+        ind.classList.toggle('active', i === step);
+        ind.classList.toggle('done', i < step);
+    }
+    currentStep = step;
+}
+
+// ===== Step 1: Test Connection =====
+async function testConnection() {
+    const name = document.getElementById('w-name').value.trim();
+    const hostname = document.getElementById('w-hostname').value.trim();
+    const port = document.getElementById('w-port').value;
+    const user = document.getElementById('w-user').value.trim();
+    const password = document.getElementById('w-password').value;
+
+    if (!name || !hostname || !user || !password) {
+        showResult('conn-result', 'error', 'Fill in all fields first.');
+        return;
+    }
+
+    showResult('conn-result', '', 'Testing...');
+
+    const form = new FormData();
+    form.append('hostname', hostname);
+    form.append('port', port);
+    form.append('user', user);
+    form.append('password', password);
+
+    try {
+        const resp = await fetch('/api/test-connection', { method: 'POST', body: form });
         const data = await resp.json();
-        const el = document.getElementById('add-result');
         if (data.success) {
-            el.className = 'result-success';
-            el.textContent = data.message;
-            setTimeout(() => location.reload(), 1000);
+            connInfo = { hostname, port, user, password, home_dir: data.home_dir };
+            document.getElementById('w-gpu-count').value = data.gpu_count || 0;
+            showResult('conn-result', 'success', `Connected! ${data.gpu_count} GPU(s) detected.`);
+            document.getElementById('btn-step1-next').disabled = false;
         } else {
-            el.className = 'result-error';
-            el.textContent = data.detail || 'Failed to add node';
+            showResult('conn-result', 'error', data.error || 'Connection failed.');
+            document.getElementById('btn-step1-next').disabled = true;
+        }
+    } catch (e) {
+        showResult('conn-result', 'error', `Error: ${e.message}`);
+    }
+}
+
+// ===== Step 2: File Browser =====
+let currentBrowsePath = '/';
+
+async function browseTo(path) {
+    currentBrowsePath = path;
+    document.getElementById('browser-current-path').textContent = path;
+    document.getElementById('browser-entries').innerHTML = '<p class="muted">Loading...</p>';
+
+    const form = new FormData();
+    form.append('hostname', connInfo.hostname);
+    form.append('port', connInfo.port);
+    form.append('user', connInfo.user);
+    form.append('password', connInfo.password);
+    form.append('path', path);
+
+    try {
+        const resp = await fetch('/api/browse-directory', { method: 'POST', body: form });
+        const data = await resp.json();
+        renderBrowser(data.entries, data.current_path);
+    } catch (e) {
+        document.getElementById('browser-entries').innerHTML =
+            `<p class="result-error">Error: ${e.message}</p>`;
+    }
+}
+
+function renderBrowser(entries, path) {
+    const el = document.getElementById('browser-entries');
+    if (!entries || entries.length === 0) {
+        el.innerHTML = '<p class="muted">Empty directory</p>';
+        return;
+    }
+
+    const dirs = entries.filter(e => e.type === 'dir').sort((a, b) => a.name.localeCompare(b.name));
+    const files = entries.filter(e => e.type === 'file').sort((a, b) => a.name.localeCompare(b.name));
+
+    let html = '';
+    html += `<div class="browser-select-row">
+        <button class="btn btn-sm btn-primary" onclick="selectWorkDir('${path.replace(/'/g, "\\'")}')">
+            Select This Directory
+        </button>
+        <span class="cmd muted">${path}</span>
+    </div>`;
+
+    for (const d of dirs) {
+        const escapedPath = d.path.replace(/'/g, "\\'");
+        html += `<div class="browser-entry browser-dir" onclick="browseTo('${escapedPath}')">
+            <span class="browser-icon">&#128193;</span> ${d.name}/
+        </div>`;
+    }
+    for (const f of files) {
+        html += `<div class="browser-entry browser-file">
+            <span class="browser-icon">&#128196;</span> ${f.name}
+        </div>`;
+    }
+    el.innerHTML = html;
+}
+
+function browseParent() {
+    const parts = currentBrowsePath.replace(/\/+$/, '').split('/');
+    parts.pop();
+    const parent = parts.join('/') || '/';
+    browseTo(parent);
+}
+
+function selectWorkDir(path) {
+    document.getElementById('w-workdir').value = path;
+    detectVenvs(path);
+}
+
+// ===== Step 2: Venv Detection =====
+async function detectVenvs(searchRoot) {
+    const root = searchRoot || document.getElementById('w-workdir').value || connInfo.home_dir || '/';
+
+    const form = new FormData();
+    form.append('hostname', connInfo.hostname);
+    form.append('port', connInfo.port);
+    form.append('user', connInfo.user);
+    form.append('password', connInfo.password);
+    form.append('search_root', root);
+
+    try {
+        const resp = await fetch('/api/detect-venvs', { method: 'POST', body: form });
+        const data = await resp.json();
+        const select = document.getElementById('w-venv-select');
+        select.innerHTML = '<option value="">None (no venv)</option>';
+        for (const v of (data.venvs || [])) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+        }
+        if (data.venvs && data.venvs.length > 0) {
+            select.value = data.venvs[0];
+            document.getElementById('w-venv').value = data.venvs[0];
+        }
+    } catch (e) {
+        console.error('Venv detection error:', e);
+    }
+}
+
+document.getElementById('w-venv-select')?.addEventListener('change', function() {
+    document.getElementById('w-venv').value = this.value;
+});
+
+// ===== Step 2: Mini Terminal =====
+function openMiniTerminal() {
+    const wrapper = document.getElementById('mini-terminal-wrapper');
+    wrapper.style.display = 'block';
+    const container = document.getElementById('mini-terminal-container');
+    container.innerHTML = '';
+
+    miniTerm = new Terminal({
+        cursorBlink: true,
+        fontSize: 13,
+        fontFamily: "'SF Mono', 'Fira Code', monospace",
+        theme: { background: '#0f1117', foreground: '#e1e4ed', cursor: '#6366f1' },
+    });
+    const fitAddon = new FitAddon.FitAddon();
+    miniTerm.loadAddon(fitAddon);
+    miniTerm.open(container);
+    fitAddon.fit();
+
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const params = new URLSearchParams({
+        hostname: connInfo.hostname,
+        port: connInfo.port,
+        user: connInfo.user,
+        password: connInfo.password,
+    });
+    miniTermWs = new WebSocket(`${proto}//${location.host}/ws/setup-terminal?${params}`);
+
+    miniTermWs.onmessage = (e) => miniTerm.write(e.data);
+    miniTermWs.onclose = () => miniTerm.write('\r\n\x1b[31m--- Disconnected ---\x1b[0m\r\n');
+    miniTerm.onData((data) => {
+        if (miniTermWs && miniTermWs.readyState === WebSocket.OPEN) {
+            miniTermWs.send(data);
         }
     });
+}
 
-    async function removeNode(name) {
-        if (!confirm(`Remove node "${name}"?`)) return;
-        const resp = await fetch(`/api/nodes/${name}`, { method: 'DELETE' });
-        if (resp.ok) {
-            document.getElementById(`row-${name}`)?.remove();
+async function captureTerminalPwd() {
+    const form = new FormData();
+    form.append('hostname', connInfo.hostname);
+    form.append('port', connInfo.port);
+    form.append('user', connInfo.user);
+    form.append('password', connInfo.password);
+    form.append('command', 'pwd');
+
+    try {
+        const resp = await fetch('/api/exec-command', { method: 'POST', body: form });
+        const data = await resp.json();
+        if (data.stdout) {
+            const dir = data.stdout.trim();
+            document.getElementById('w-workdir').value = dir;
+            closeMiniTerminal();
+            browseTo(dir);
         }
+    } catch (e) {
+        console.error('pwd capture error:', e);
     }
+}
+
+function closeMiniTerminal() {
+    if (miniTermWs) { miniTermWs.close(); miniTermWs = null; }
+    if (miniTerm) { miniTerm.dispose(); miniTerm = null; }
+    document.getElementById('mini-terminal-wrapper').style.display = 'none';
+}
+
+// ===== Step 3: Review & Save =====
+function buildReviewSummary() {
+    const name = document.getElementById('w-name').value.trim();
+    const hostname = document.getElementById('w-hostname').value.trim();
+    const port = document.getElementById('w-port').value;
+    const user = document.getElementById('w-user').value.trim();
+    const workDir = document.getElementById('w-workdir').value;
+    const gpuCount = document.getElementById('w-gpu-count').value;
+    const venv = document.getElementById('w-venv').value || document.getElementById('w-venv-select').value;
+
+    document.getElementById('review-summary').innerHTML = `
+        <table class="data-table">
+            <tr><td class="muted">Name</td><td><strong>${name}</strong></td></tr>
+            <tr><td class="muted">Host</td><td>${hostname}:${port}</td></tr>
+            <tr><td class="muted">User</td><td>${user}</td></tr>
+            <tr><td class="muted">Work Dir</td><td class="cmd">${workDir || '<em>not set</em>'}</td></tr>
+            <tr><td class="muted">Venv</td><td class="cmd">${venv || 'None'}</td></tr>
+            <tr><td class="muted">GPUs</td><td>${gpuCount}</td></tr>
+        </table>
+    `;
+}
+
+async function saveNode() {
+    const form = new FormData();
+    form.append('name', document.getElementById('w-name').value.trim());
+    form.append('hostname', document.getElementById('w-hostname').value.trim());
+    form.append('port', document.getElementById('w-port').value);
+    form.append('user', document.getElementById('w-user').value.trim());
+    form.append('password', document.getElementById('w-password').value);
+    form.append('work_dir', document.getElementById('w-workdir').value);
+    form.append('gpu_count', document.getElementById('w-gpu-count').value);
+    form.append('venv_activate', document.getElementById('w-venv').value || document.getElementById('w-venv-select').value);
+    form.append('network', document.getElementById('w-network').value);
+    form.append('tags', document.getElementById('w-tags').value);
+
+    try {
+        const resp = await fetch('/api/nodes', { method: 'POST', body: form });
+        const data = await resp.json();
+        if (data.success) {
+            showResult('save-result', 'success', data.message);
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showResult('save-result', 'error', data.detail || 'Save failed');
+        }
+    } catch (e) {
+        showResult('save-result', 'error', `Error: ${e.message}`);
+    }
+}
+
+// ===== Existing Nodes: Remove =====
+async function removeNode(name) {
+    if (!confirm(`Remove node "${name}"?`)) return;
+    const resp = await fetch(`/api/nodes/${name}`, { method: 'DELETE' });
+    if (resp.ok) {
+        document.getElementById(`row-${name}`)?.remove();
+    }
+}
+
+// ===== Helpers =====
+function showResult(elId, type, msg) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.className = type === 'success' ? 'result-success' :
+                   type === 'error' ? 'result-error' : 'muted';
+}
 </script>
 {% endblock %}

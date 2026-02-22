@@ -255,3 +255,99 @@ input:focus, select:focus, textarea:focus {
 .result-error { color: var(--red); margin-top: 0.5rem; font-size: 0.85rem; }
 
 .muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* Wizard */
+.wizard-steps {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.wizard-step {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.wizard-step.active {
+    color: white;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.wizard-step.done {
+    color: var(--green);
+    border-color: var(--green);
+}
+
+/* File Browser */
+.file-browser {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.file-browser-path {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+}
+
+.browser-entries {
+    padding: 4px;
+}
+
+.browser-select-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+
+.browser-entry {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: default;
+}
+.browser-dir {
+    cursor: pointer;
+}
+.browser-dir:hover {
+    background: var(--surface-hover);
+    color: var(--accent);
+}
+.browser-file {
+    color: var(--text-muted);
+}
+.browser-icon {
+    margin-right: 4px;
+}
+
+/* Review box */
+.review-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.review-box .data-table td:first-child {
+    width: 80px;
+}
