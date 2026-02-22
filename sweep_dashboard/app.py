@@ -257,6 +257,65 @@ async def api_kill_screen(node_name: str, screen_name: str):
     return result
 
 
+@app.post("/api/test-connection")
+async def api_test_connection(
+    hostname: str = Form(...),
+    port: int = Form(22),
+    user: str = Form(...),
+    password: str = Form(...),
+):
+    """Test SSH connectivity to a node before saving it."""
+    from .models import NodeConfig
+    temp_node = NodeConfig(
+        name="_test", hostname=hostname, port=port, user=user,
+        password_encrypted="", work_dir="/",
+    )
+    online = ssh_mgr.check_online(temp_node, password)
+    if not online:
+        return {"success": False, "error": "Connection failed. Check hostname, port, user, and password."}
+    gpu_count = ssh_mgr.detect_gpu_count(temp_node, password)
+    home_dir = ssh_mgr.get_home_dir(temp_node, password)
+    return {"success": True, "gpu_count": gpu_count, "home_dir": home_dir}
+
+
+@app.post("/api/browse-directory")
+async def api_browse_directory(
+    hostname: str = Form(...),
+    port: int = Form(22),
+    user: str = Form(...),
+    password: str = Form(...),
+    path: str = Form("/"),
+):
+    """List directory contents on a remote node (for the file browser)."""
+    from .models import NodeConfig
+    temp_node = NodeConfig(
+        name="_browse", hostname=hostname, port=port, user=user,
+        password_encrypted="", work_dir="/",
+    )
+    entries = ssh_mgr.list_directory(temp_node, password, path)
+    return {"entries": entries, "current_path": path}
+
+
+@app.post("/api/detect-venvs")
+async def api_detect_venvs(
+    hostname: str = Form(...),
+    port: int = Form(22),
+    user: str = Form(...),
+    password: str = Form(...),
+    search_root: str = Form(""),
+):
+    """Search for Python venvs on a remote node."""
+    from .models import NodeConfig
+    temp_node = NodeConfig(
+        name="_venv", hostname=hostname, port=port, user=user,
+        password_encrypted="", work_dir="/",
+    )
+    if not search_root:
+        search_root = ssh_mgr.get_home_dir(temp_node, password)
+    venvs = ssh_mgr.find_venvs(temp_node, password, search_root)
+    return {"venvs": venvs, "search_root": search_root}
+
+
 # ---------------------------------------------------------------------------
 # Node Management
 # ---------------------------------------------------------------------------

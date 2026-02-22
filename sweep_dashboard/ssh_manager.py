@@ -115,6 +115,53 @@ class SSHManager:
         sftp.close()
         client.close()
 
+    def list_directory(self, node: NodeConfig, password: str, path: str = "/") -> list[dict]:
+        """List directory contents on a remote node. Returns list of {name, type, path}."""
+        cmd = f"ls -1pL {path} 2>/dev/null"
+        code, stdout, _ = self.execute(node, cmd, password, timeout=10)
+        if code != 0:
+            return []
+        entries = []
+        for line in stdout.strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line.endswith("/"):
+                name = line[:-1]
+                entries.append({"name": name, "type": "dir", "path": f"{path.rstrip('/')}/{name}"})
+            else:
+                entries.append({"name": line, "type": "file", "path": f"{path.rstrip('/')}/{line}"})
+        return entries
+
+    def detect_gpu_count(self, node: NodeConfig, password: str) -> int:
+        """Detect number of GPUs on a remote node."""
+        cmd = "nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | wc -l"
+        code, stdout, _ = self.execute(node, cmd, password, timeout=10)
+        if code != 0:
+            return 0
+        try:
+            return int(stdout.strip())
+        except ValueError:
+            return 0
+
+    def find_venvs(self, node: NodeConfig, password: str, search_root: str) -> list[str]:
+        """Search for Python virtual environments under a root path."""
+        cmd = (
+            f"find {search_root} -maxdepth 4 -path '*/bin/activate' -type f 2>/dev/null "
+            f"| head -10"
+        )
+        code, stdout, _ = self.execute(node, cmd, password, timeout=15)
+        if code != 0:
+            return []
+        return [l.strip() for l in stdout.strip().splitlines() if l.strip()]
+
+    def get_home_dir(self, node: NodeConfig, password: str) -> str:
+        """Get the home directory of the remote user."""
+        code, stdout, _ = self.execute(node, "echo $HOME", password, timeout=5)
+        if code != 0:
+            return "/"
+        return stdout.strip() or "/"
+
     @staticmethod
     def parse_nvidia_smi(raw: str) -> list[GpuInfo]:
         gpus = []
