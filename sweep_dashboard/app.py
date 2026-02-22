@@ -194,10 +194,12 @@ async def api_exec_command(
 
 
 def _status_to_dict(status) -> dict:
-    """Convert a NodeStatus to a dict, including computed memory_free_mb."""
+    """Convert a NodeStatus to a dict, including computed fields."""
     data = status.model_dump()
     for i, gpu in enumerate(data["gpus"]):
         gpu["memory_free_mb"] = status.gpus[i].memory_free_mb
+        idle = monitor.get_gpu_idle_seconds(status.node_name, status.gpus[i].index)
+        gpu["idle_seconds"] = idle
     return data
 
 

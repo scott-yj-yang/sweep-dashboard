@@ -102,28 +102,41 @@ def test_parse_jobs_keeps_wrapper_when_no_python():
 
 
 def test_status_to_dict_helper():
-    """Verify the _status_to_dict helper adds memory_free_mb."""
+    """Verify the _status_to_dict helper adds memory_free_mb and idle_seconds."""
+    from unittest.mock import MagicMock
+
+    from sweep_dashboard import app as app_module
     from sweep_dashboard.app import _status_to_dict
     from sweep_dashboard.models import GpuInfo, NodeStatus
 
-    status = NodeStatus(
-        node_name="test",
-        online=True,
-        gpus=[
-            GpuInfo(
-                index=0,
-                name="RTX 4090",
-                utilization_pct=50.0,
-                memory_used_mb=4000,
-                memory_total_mb=24000,
-                temperature_c=65,
-            )
-        ],
-    )
-    result = _status_to_dict(status)
-    assert result["node_name"] == "test"
-    assert result["online"] is True
-    assert len(result["gpus"]) == 1
-    assert result["gpus"][0]["memory_free_mb"] == 20000
-    assert result["gpus"][0]["memory_used_mb"] == 4000
-    assert result["gpus"][0]["memory_total_mb"] == 24000
+    # Patch the module-level monitor so _status_to_dict can call it
+    mock_monitor = MagicMock()
+    mock_monitor.get_gpu_idle_seconds.return_value = None
+    original = app_module.monitor
+    app_module.monitor = mock_monitor
+
+    try:
+        status = NodeStatus(
+            node_name="test",
+            online=True,
+            gpus=[
+                GpuInfo(
+                    index=0,
+                    name="RTX 4090",
+                    utilization_pct=50.0,
+                    memory_used_mb=4000,
+                    memory_total_mb=24000,
+                    temperature_c=65,
+                )
+            ],
+        )
+        result = _status_to_dict(status)
+        assert result["node_name"] == "test"
+        assert result["online"] is True
+        assert len(result["gpus"]) == 1
+        assert result["gpus"][0]["memory_free_mb"] == 20000
+        assert result["gpus"][0]["memory_used_mb"] == 4000
+        assert result["gpus"][0]["memory_total_mb"] == 24000
+        assert result["gpus"][0]["idle_seconds"] is None
+    finally:
+        app_module.monitor = original

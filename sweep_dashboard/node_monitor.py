@@ -28,6 +28,8 @@ class NodeMonitor:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._statuses: dict[str, NodeStatus] = {}
         self._running = False
+        # Track last-active timestamp per GPU: {node_name: {gpu_index: datetime}}
+        self._gpu_last_active: dict[str, dict[int, datetime]] = {}
 
     @property
     def statuses(self) -> dict[str, NodeStatus]:
@@ -35,6 +37,13 @@ class NodeMonitor:
 
     def get_status(self, node_name: str) -> NodeStatus | None:
         return self._statuses.get(node_name)
+
+    def get_gpu_idle_seconds(self, node_name: str, gpu_index: int) -> float | None:
+        """Return seconds since the GPU was last active, or None if never tracked."""
+        last = self._gpu_last_active.get(node_name, {}).get(gpu_index)
+        if last is None:
+            return None
+        return (datetime.now(timezone.utc) - last).total_seconds()
 
     async def start(self):
         """Start the background polling loop."""
@@ -88,6 +97,15 @@ class NodeMonitor:
             gpu_info = await loop.run_in_executor(
                 self._executor, self._ssh.get_gpu_info, node, password
             )
+
+            # Track GPU idle time
+            now = datetime.now(timezone.utc)
+            if node.name not in self._gpu_last_active:
+                self._gpu_last_active[node.name] = {}
+            for gpu in gpu_info:
+                if gpu.utilization_pct > 5.0:
+                    self._gpu_last_active[node.name][gpu.index] = now
+
             sys_info = await loop.run_in_executor(
                 self._executor, self._ssh.get_system_info, node, password
             )

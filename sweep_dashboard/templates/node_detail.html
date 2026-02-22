@@ -41,6 +41,14 @@
 <script>
     const nodeName = "{{ node.name }}";
 
+    function formatIdleTime(seconds) {
+        if (seconds == null) return '';
+        if (seconds < 60) return 'idle <1m';
+        if (seconds < 3600) return `idle ${Math.floor(seconds/60)}m`;
+        if (seconds < 86400) return `idle ${Math.floor(seconds/3600)}h ${Math.floor((seconds%3600)/60)}m`;
+        return `idle ${Math.floor(seconds/86400)}d ${Math.floor((seconds%86400)/3600)}h`;
+    }
+
     async function loadNodeDetail() {
         try {
             const resp = await fetch(`/api/status/${nodeName}`);
@@ -83,6 +91,7 @@
                 </div>
                 <span>VRAM: ${g.memory_used_mb}/${g.memory_total_mb} MB (${Math.round(g.memory_used_mb/g.memory_total_mb*100)}%)</span>
                 <span style="margin-left:1rem">Temp: ${g.temperature_c}°C</span>
+                ${g.idle_seconds != null && g.utilization_pct <= 5 ? `<span style="margin-left:1rem;color:var(--text-muted)">Idle: ${formatIdleTime(g.idle_seconds)}</span>` : ''}
             </div>
         `).join('');
     }
